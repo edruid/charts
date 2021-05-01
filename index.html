@@ -1,0 +1,114 @@
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=windows-1252">
+<title>chart test</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@v3.2.0/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@v2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+<h1>chart test</h1>
+<div>
+<canvas id="myChart" style="display: block; box-sizing: border-box; height: 537px; width: 1074px;" width="1074" height="537"></canvas>
+<script>
+Date.prototype.addDays = function(days) {
+    var date = new Date(this.valueOf());
+    date.setDate(date.getDate() + days);
+    return date;
+}
+Date.prototype.dateString = function() {
+    var date = new Date(this.valueOf());
+    var month = '' + (date.getMonth() + 1);
+    var day = '' + date.getDate();
+    if (month.length < 2) {
+        month = '0' + month;
+    }
+    if (day.length < 2) {
+        day = '0' + day;
+    }
+
+    return [date.getFullYear(), month, day].join('-');
+}
+function docReady(fn) {
+    // see if DOM is already available
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+        // call on next available tick
+        setTimeout(fn, 1);
+    } else {
+        document.addEventListener("DOMContentLoaded", fn);
+    }
+}
+
+function dewPoint(temp, humidity) {
+    var foo = Math.log(humidity / 100) + (18.678 * temp) / (257.14 + temp);
+    return (257.14 * foo) / (18.678 - foo);
+}
+function greenhouse(text, temp, dewPoints) {
+    var lines = text.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+        points = lines[i].split('\t');
+        temp.push({x: points[0], y: points[1]});
+        dewPoints.push({x: points[0], y: dewPoint(parseFloat(points[1]), parseFloat(points[2]))});
+    }
+}
+function plot(dewPoints, temp) {
+    const config = {
+        type: 'scatter',
+        data: {
+            datasets: [
+                {
+                    label: 'greenhouse temp',
+                    data: temp,
+                    backgroundColor: 'rgb(255, 99, 132)',
+                    showLine: true
+                },
+                {
+                    label: 'greenhouse dew point',
+                    data: dewPoints,
+                    backgroundColor: 'rgb(99, 255, 132)',
+                    showLine: true
+                },
+            ],
+        },
+        options: {
+            scales: {
+                x: {
+                    type: 'time',
+                    position: 'bottom',
+                    time: {
+                        tooltipFormat: 'yyyy-MM-dd HH:mm',
+                        displayFormats: {
+                            hour: 'yyyy-MM-dd HH'
+                        }
+                    }
+                }
+            }
+        }
+    };
+    var myChart = new Chart(
+        document.getElementById('myChart'),
+        config
+    );
+
+}
+docReady(
+    function(){
+        const request = async () => {
+            var temp = [];
+            var dewPoints = [];
+            var response;
+            var text;
+            var today = new Date();
+            for (i=-7; i <= 0; i++) {
+                response = await fetch('/greenhouse_' + today.addDays(i).dateString() + '.log');
+                text = await response.text();
+                greenhouse(text, temp, dewPoints);
+            }
+            plot(dewPoints, temp);
+        }
+        request();
+    }
+);
+</script>
+
+
+</div></body></html>
