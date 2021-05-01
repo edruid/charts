@@ -1,14 +1,9 @@
 <html><head>
 <meta http-equiv="content-type" content="text/html; charset=windows-1252">
-<title>chart test</title>
+<title>Charts</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@v3.2.0/dist/chart.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@v2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-</head>
-<body>
-<h1>chart test</h1>
-<div>
-<canvas id="myChart" style="display: block; box-sizing: border-box; height: 537px; width: 1074px;" width="1074" height="537"></canvas>
 <script>
 Date.prototype.addDays = function(days) {
     var date = new Date(this.valueOf());
@@ -28,6 +23,23 @@ Date.prototype.dateString = function() {
 
     return [date.getFullYear(), month, day].join('-');
 }
+</script>
+</head>
+<body>
+<h1>Greenhouse</h1>
+<div>
+<label>From <input type="date" id="greenhouseFrom"  onchange="plotGreenhouse()"/></label>
+<label>To
+<input
+    type="date"
+    id="greenhouseTo"
+    onchange="plotGreenhouse()"
+/></label>
+
+<canvas id="myChart" style="display: block; box-sizing: border-box; height: 537px; width: 1074px;" width="1074" height="537"></canvas>
+<script>
+document.getElementById('greenhouseFrom').value = new Date().addDays(-6).dateString();
+document.getElementById('greenhouseTo').value = new Date().dateString();
 function docReady(fn) {
     // see if DOM is already available
     if (document.readyState === "complete" || document.readyState === "interactive") {
@@ -51,23 +63,24 @@ function greenhouse(text, temp, dewPoints) {
     }
 }
 function plot(dewPoints, temp) {
+    datasets = [
+        {
+            label: 'greenhouse temp',
+            data: temp,
+            backgroundColor: 'rgb(255, 99, 132)',
+            showLine: true
+        },
+        {
+            label: 'greenhouse dew point',
+            data: dewPoints,
+            backgroundColor: 'rgb(99, 255, 132)',
+            showLine: true
+        },
+    ];
     const config = {
         type: 'scatter',
         data: {
-            datasets: [
-                {
-                    label: 'greenhouse temp',
-                    data: temp,
-                    backgroundColor: 'rgb(255, 99, 132)',
-                    showLine: true
-                },
-                {
-                    label: 'greenhouse dew point',
-                    data: dewPoints,
-                    backgroundColor: 'rgb(99, 255, 132)',
-                    showLine: true
-                },
-            ],
+            datasets: datasets,
         },
         options: {
             scales: {
@@ -84,28 +97,38 @@ function plot(dewPoints, temp) {
             }
         }
     };
-    var myChart = new Chart(
-        document.getElementById('myChart'),
-        config
-    );
+    if (window.greenHouse) {
+        window.greenHouse.data.datasets = datasets;
+        window.greenHouse.update();
+    } else {
+        window.greenHouse = new Chart(
+            document.getElementById('myChart'),
+            config
+        );
+    }
 
+}
+function plotGreenhouse() {
+    const request = async () => {
+        var temp = [];
+        var dewPoints = [];
+        var response;
+        var text;
+        from = new Date(document.getElementById('greenhouseFrom').value);
+        to = new Date(document.getElementById('greenhouseTo').value);
+        console.log(from, to);
+        for (;from <= to; from=from.addDays(1)) {
+            response = await fetch('/greenhouse_' + from.dateString() + '.log');
+            text = await response.text();
+            greenhouse(text, temp, dewPoints);
+        }
+        plot(dewPoints, temp);
+    }
+    request();
 }
 docReady(
     function(){
-        const request = async () => {
-            var temp = [];
-            var dewPoints = [];
-            var response;
-            var text;
-            var today = new Date();
-            for (i=-7; i <= 0; i++) {
-                response = await fetch('/greenhouse_' + today.addDays(i).dateString() + '.log');
-                text = await response.text();
-                greenhouse(text, temp, dewPoints);
-            }
-            plot(dewPoints, temp);
-        }
-        request();
+        plotGreenhouse();
     }
 );
 </script>
