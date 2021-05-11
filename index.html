@@ -36,10 +36,24 @@ Date.prototype.dateString = function() {
     onchange="plotGreenhouse()"
 /></label>
 
-<canvas id="myChart" style="display: block; box-sizing: border-box; height: 537px; width: 1074px;" width="1074" height="537"></canvas>
+<canvas id="greenhouse" style="display: block; box-sizing: border-box; height: 537px; width: 1074px;" width="1074" height="537"></canvas>
+<h1>Barrel</h1>
+<div>
+<label>From <input type="date" id="barrelFrom"  onchange="plotBarrel()"/></label>
+<label>To
+<input
+    type="date"
+    id="barrelTo"
+    onchange="plotBarrel()"
+/></label>
+
+<canvas id="barrel" style="display: block; box-sizing: border-box; height: 537px; width: 1074px;" width="1074" height="537"></canvas>
 <script>
+window.charts = {};
 document.getElementById('greenhouseFrom').value = new Date().addDays(-6).dateString();
 document.getElementById('greenhouseTo').value = new Date().dateString();
+document.getElementById('barrelFrom').value = new Date().addDays(-6).dateString();
+document.getElementById('barrelTo').value = new Date().dateString();
 function docReady(fn) {
     // see if DOM is already available
     if (document.readyState === "complete" || document.readyState === "interactive") {
@@ -54,29 +68,24 @@ function dewPoint(temp, humidity) {
     var foo = Math.log(humidity / 100) + (18.678 * temp) / (257.14 + temp);
     return (257.14 * foo) / (18.678 - foo);
 }
-function greenhouse(text, temp, dewPoints) {
+function greenhouse(text, datasets) {
     var lines = text.split('\n');
     for (var i = 0; i < lines.length; i++) {
         points = lines[i].split('\t');
-        temp.push({x: points[0], y: points[1]});
-        dewPoints.push({x: points[0], y: dewPoint(parseFloat(points[1]), parseFloat(points[2]))});
+        datasets[0].data.push({x: points[0], y: points[1]});
+        datasets[1].data.push({x: points[0], y: dewPoint(parseFloat(points[1]), parseFloat(points[2]))});
     }
 }
-function plot(dewPoints, temp) {
-    datasets = [
-        {
-            label: 'greenhouse temp',
-            data: temp,
-            backgroundColor: 'rgb(255, 99, 132)',
-            showLine: true
-        },
-        {
-            label: 'greenhouse dew point',
-            data: dewPoints,
-            backgroundColor: 'rgb(99, 255, 132)',
-            showLine: true
-        },
-    ];
+function barrel(text, datasets) {
+    var lines = text.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+        points = lines[i].split('\t');
+        if (points[1] != 0 && points[2] > -40) {
+            datasets[0].data.push({x: points[0], y: points[2]});
+        }
+    }
+}
+function plot(datasets, id) {
     const config = {
         type: 'scatter',
         data: {
@@ -97,38 +106,63 @@ function plot(dewPoints, temp) {
             }
         }
     };
-    if (window.greenHouse) {
-        window.greenHouse.data.datasets = datasets;
-        window.greenHouse.update();
+    if (window.charts[id]) {
+        window.charts[id].data.datasets = datasets;
+        window.charts[id].update();
     } else {
-        window.greenHouse = new Chart(
-            document.getElementById('myChart'),
+        window.charts[id] = new Chart(
+            document.getElementById(id),
             config
         );
     }
 
 }
-function plotGreenhouse() {
+function retreive(name, handler, datasets) {
     const request = async () => {
-        var temp = [];
-        var dewPoints = [];
-        var response;
-        var text;
-        from = new Date(document.getElementById('greenhouseFrom').value);
-        to = new Date(document.getElementById('greenhouseTo').value);
-        console.log(from, to);
+        from = new Date(document.getElementById(name + 'From').value);
+        to = new Date(document.getElementById(name + 'To').value);
         for (;from <= to; from=from.addDays(1)) {
-            response = await fetch('/greenhouse_' + from.dateString() + '.log');
+            response = await fetch('/' + name + '_' + from.dateString() + '.log');
             text = await response.text();
-            greenhouse(text, temp, dewPoints);
+            handler(text, datasets);
         }
-        plot(dewPoints, temp);
+        plot(datasets, name);
     }
     request();
+
+}
+function plotGreenhouse() {
+    datasets = [
+        {
+            label: 'greenhouse temp',
+            data: [],
+            backgroundColor: 'rgb(255, 99, 132)',
+            showLine: true
+        },
+        {
+            label: 'greenhouse dew point',
+            data: [],
+            backgroundColor: 'rgb(99, 255, 132)',
+            showLine: true
+        },
+    ];
+    retreive('greenhouse', greenhouse, datasets);
+}
+function plotBarrel() {
+    datasets = [
+        {
+            label: 'barrel liters',
+            data: [],
+            backgroundColor: 'rgb(255, 99, 132)',
+            showLine: true
+        },
+    ];
+    retreive('barrel', barrel, datasets);
 }
 docReady(
     function(){
         plotGreenhouse();
+        plotBarrel();
     }
 );
 </script>
