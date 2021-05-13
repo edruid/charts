@@ -71,7 +71,7 @@ function dewPoint(temp, humidity) {
 function greenhouse(text, datasets) {
     var lines = text.split('\n');
     for (var i = 0; i < lines.length; i++) {
-        points = lines[i].split('\t');
+        var points = lines[i].split('\t');
         datasets[0].data.push({x: points[0], y: points[1]});
         datasets[1].data.push({x: points[0], y: dewPoint(parseFloat(points[1]), parseFloat(points[2]))});
     }
@@ -79,7 +79,7 @@ function greenhouse(text, datasets) {
 function barrel(text, datasets) {
     var lines = text.split('\n');
     for (var i = 0; i < lines.length; i++) {
-        points = lines[i].split('\t');
+        var points = lines[i].split('\t');
         if (points[1] != 0 && points[2] > -40) {
             datasets[0].data.push({x: points[0], y: points[2]});
         }
@@ -119,11 +119,11 @@ function plot(datasets, id) {
 }
 function retreive(name, handler, datasets) {
     const request = async () => {
-        from = new Date(document.getElementById(name + 'From').value);
-        to = new Date(document.getElementById(name + 'To').value);
+        var from = new Date(document.getElementById(name + 'From').value);
+        var to = new Date(document.getElementById(name + 'To').value);
         for (;from <= to; from=from.addDays(1)) {
-            response = await fetch('/' + name + '_' + from.dateString() + '.log');
-            text = await response.text();
+            var response = await fetch('/' + name + '_' + from.dateString() + '.log');
+            var text = await response.text();
             handler(text, datasets);
         }
         plot(datasets, name);
@@ -132,7 +132,7 @@ function retreive(name, handler, datasets) {
 
 }
 function plotGreenhouse() {
-    datasets = [
+    var datasets = [
         {
             label: 'greenhouse temp',
             data: [],
@@ -149,7 +149,7 @@ function plotGreenhouse() {
     retreive('greenhouse', greenhouse, datasets);
 }
 function plotBarrel() {
-    datasets = [
+    var datasets = [
         {
             label: 'barrel liters',
             data: [],
