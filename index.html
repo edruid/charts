@@ -52,6 +52,7 @@ Date.prototype.dateString = function() {
 <canvas id="barrel" style="display: block; box-sizing: border-box; height: 537px; width: 1074px;" width="1074" height="537"></canvas>
 <script>
 window.charts = {};
+window.data = {}
 document.getElementById('temperatureFrom').value = new Date().addDays(-6).dateString();
 document.getElementById('temperatureTo').value = new Date().dateString();
 document.getElementById('barrelFrom').value = new Date().addDays(-6).dateString();
@@ -122,13 +123,22 @@ function plot(datasets, id) {
 function retreive(name, files, handler, datasets) {
     const request = async () => {
         var count = files.length;
+        const today = (new Date()).dateString();
         for (var i =0; i < count; i++) {
             var file = files[i];
             var from = new Date(document.getElementById(name + 'From').value);
             var to = new Date(document.getElementById(name + 'To').value);
             for (;from <= to; from=from.addDays(1)) {
-                var response = await fetch(file + '_' + from.dateString() + '.log');
-                var text = await response.text();
+                var filename = file + '_' + from.dateString() + '.log'
+                if (window.data[filename]) {
+                    var text = window.data[filename];
+                } else {
+                    var response = await fetch(filename);
+                    var text = await response.text();
+                    if (today > from.dateString()) {
+                        window.data[filename] = text;
+                    }
+                }
                 handler(text, datasets, i*2);
             }
         }
